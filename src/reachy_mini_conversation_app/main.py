@@ -73,6 +73,16 @@ def main() -> None:
         except Exception as exc:
             logger.error("tool-spaces command failed: %s", exc)
             raise SystemExit(1) from exc
+    if args.command == "local-openvino-server":
+        from reachy_mini_conversation_app.local_openvino.cli import run_local_openvino_server
+
+        logger = setup_logger(args.debug)
+        try:
+            run_local_openvino_server(args)
+        except Exception as exc:
+            logger.error("local-openvino-server command failed: %s", exc)
+            raise SystemExit(1) from exc
+        return
     run(args)
 
 

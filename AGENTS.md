@@ -106,6 +106,16 @@ tests/                    # pytest suite, mirrors the src layout
 
 Architecture overview: [`README.md`](README.md#architecture).
 
+**Personal-fork feature — local OpenVINO backend:** `src/reachy_mini_conversation_app/local_openvino/`,
+`local_openvino_routes.py`, and `local_openvino_settings.py` implement a second realtime server
+that runs the voice pipeline on-device via OpenVINO (see the README's "Local OpenVINO backend"
+section). **Before touching any of this, read
+[`LOCAL_OPENVINO_CHANGELOG.md`](LOCAL_OPENVINO_CHANGELOG.md)** — it records real bugs found and
+fixed via live hardware testing (wrong OpenVINO GenAI call shapes, a dead dependency, a test-
+collection bug) and the reasoning behind several non-obvious design choices (why TTS doesn't use
+OpenVINO, why tool-calling is prompt-driven, why DLStreamer isn't used). Skipping it risks
+reintroducing bugs that were already found and fixed once.
+
 - **Adding a tool:** subclass `Tool` from `tools/core_tools.py` in its own file under `tools/`. Define `name`, `description`, `parameters_schema`, and an async `__call__(self, deps: ToolDependencies, **kwargs)` returning a `dict`. Return `{"error": ...}` on failure instead of raising into the loop. Copy an existing tool such as `tools/move_head.py`.
 - **Adding a personality:** add a directory under `profiles/`, following an existing one (e.g. `profiles/default/`).
 

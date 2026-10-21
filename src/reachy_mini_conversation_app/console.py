@@ -49,6 +49,7 @@ from reachy_mini_conversation_app.personality_routes import (
 from reachy_mini_conversation_app.profile_tool_routes import register_profile_tool_methods
 from reachy_mini_conversation_app.audio.startup_config import apply_audio_startup_config
 from reachy_mini_conversation_app.conversation_handler import ConversationHandler
+from reachy_mini_conversation_app.local_openvino_routes import register_openvino_methods
 
 
 try:
@@ -672,6 +673,16 @@ class LocalStream:
             )
         except Exception:
             logger.exception("Failed to register profile tool methods; personality tool settings will be unavailable")
+
+        try:
+            register_openvino_methods(
+                rpc,
+                instance_path=self._instance_path,
+                persist_local_connection=self._persist_hf_direct_connection,
+                restart_backend=self.request_backend_restart,
+            )
+        except Exception:
+            logger.exception("Failed to register OpenVINO methods; the local-OpenVINO settings UI will be unavailable")
 
         self._settings_initialized = True
 

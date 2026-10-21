@@ -46,6 +46,33 @@ def parse_args() -> tuple[argparse.Namespace, list]:  # type: ignore
     remove_parser.add_argument("space_slug", help="Installed Hugging Face Space slug in the form owner/space-name")
 
     tool_spaces_subparsers.add_parser("list", help="List installed Space tool sources")
+
+    local_openvino_parser = subparsers.add_parser(
+        "local-openvino-server",
+        help="Run the local OpenVINO realtime backend (requires the local-openvino extra)",
+    )
+    local_openvino_parser.add_argument(
+        "--stt-model", required=True, help="Hugging Face repo id of the OpenVINO STT model"
+    )
+    local_openvino_parser.add_argument("--stt-device", default="AUTO", help="OpenVINO device for STT (default: AUTO)")
+    local_openvino_parser.add_argument(
+        "--llm-model", required=True, help="Hugging Face repo id of the OpenVINO LLM model"
+    )
+    local_openvino_parser.add_argument(
+        "--llm-device", default="AUTO", help="OpenVINO device for the LLM (default: AUTO)"
+    )
+    local_openvino_parser.add_argument(
+        "--vision",
+        action="store_true",
+        default=False,
+        help="Treat --llm-model as a vision-capable VLM (for the camera tool) instead of a text-only LLM",
+    )
+    local_openvino_parser.add_argument(
+        "--tts-model", default=None, help="Hugging Face repo id of the OpenVINO TTS model"
+    )
+    local_openvino_parser.add_argument("--tts-device", default="AUTO", help="OpenVINO device for TTS (default: AUTO)")
+    local_openvino_parser.add_argument("--port", type=int, default=8765, help="Port to listen on (default: 8765)")
+
     return parser.parse_known_args()
 
 

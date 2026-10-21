@@ -786,6 +786,67 @@ button {
   min-height: 1.4em;
 }
 
+/* Text fallback for setups without a working microphone: shares the same
+   conversation.say RPC path as the console's typed-command entry point. */
+.talk__chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.talk__chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.talk__chat-log:empty {
+  display: none;
+}
+
+.talk__chat-bubble {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 85%;
+  word-break: break-word;
+}
+
+.talk__chat-bubble--user {
+  align-self: flex-end;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.talk__chat-bubble--assistant {
+  align-self: flex-start;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.talk__chat-bubble--error {
+  align-self: center;
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+
+.talk__chat-form {
+  display: flex;
+  gap: 8px;
+}
+
+.talk__chat-input {
+  flex: 1;
+}
+
 /* 6. Settings and tools views */
 
 .view--settings,

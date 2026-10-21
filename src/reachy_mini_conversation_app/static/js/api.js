@@ -136,12 +136,22 @@ export const deletePersonality = (name) => rpcCall("personalities.delete", { nam
 
 export const getMicState = () => rpcCall("conversation.mic", {});
 export const setMicMuted = (muted) => rpcCall("conversation.mic", { muted });
+export const sayText = (text) => rpcCall("conversation.say", { text });
 
 export const listVoices = () => rpcCall("voices.list");
 export const getCurrentVoice = () => rpcCall("voices.current");
 export const applyVoice = (voice) => rpcCall("voices.apply", { voice });
 
 export const saveBackendConfig = (payload) => rpcCall("backend.config", payload);
+
+export const getOpenvinoDevices = () => rpcCall("openvino.devices");
+export const getOpenvinoCatalog = (role) => rpcCall("openvino.catalog", { role });
+export const getOpenvinoStatus = () => rpcCall("openvino.status");
+export const downloadOpenvinoModel = (role, repoId, device) =>
+  rpcCall("openvino.download", { role, repo_id: repoId, device }, { timeoutMs: TOOL_SPACE_TIMEOUT_MS });
+export const startOpenvinoBackend = (payload) =>
+  rpcCall("openvino.start", payload, { timeoutMs: TOOL_SPACE_TIMEOUT_MS });
+export const stopOpenvinoBackend = () => rpcCall("openvino.stop", {}, { timeoutMs: TOOL_SPACE_TIMEOUT_MS });
 
 export const listToolSpaces = () => rpcCall("tool_spaces.list");
 export const addToolSpace = (slug) =>

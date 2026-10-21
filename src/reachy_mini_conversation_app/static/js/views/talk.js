@@ -2,9 +2,15 @@
  * Talk view: conversation orb driven by the RPC activity stream.
  * Audio I/O runs entirely in Python; the orb doubles as the mic toggle.
  * Robot stays live, tapping the orb only mutes or unmutes the user's mic.
+ *
+ * The chat panel below the orb is a second, text-based way into the same
+ * conversation session, for setups without a working microphone: it skips
+ * speech-to-text entirely and injects the typed line as a user turn via
+ * conversation.say (see console.py's `say` RPC method), so it reaches the
+ * same LLM/VLM/tool-calling path a spoken turn would.
  */
 
-import { applyPersonality, getMicState, listPersonalities, setMicMuted, subscribe } from "../api.js";
+import { applyPersonality, describeError, getMicState, listPersonalities, sayText, setMicMuted, subscribe } from "../api.js";
 import { ORB_STATES } from "../constants.js";
 import { createOrb, mapActivityToState } from "../orb.js";
 import { consumePendingApply } from "../pending-apply.js";
@@ -32,6 +38,7 @@ export async function mountTalkView({ outlet, signal }) {
   let togglePending = false;
   let activePersonality = null;
   let subscription = null;
+  let chatSendPending = false;
 
   const caption = h(
     "p",
@@ -53,15 +60,38 @@ export async function mountTalkView({ outlet, signal }) {
   orb.root.addEventListener("click", onMicTap);
   syncMicAria();
 
+  const chatLog = h("div", { class: "talk__chat-log", role: "log", "aria-live": "polite" });
+  const chatInput = h("input", {
+    class: "settings-input talk__chat-input",
+    type: "text",
+    placeholder: "No microphone? Type a message instead…",
+    autocomplete: "off",
+    disabled: true,
+  });
+  const chatSendButton = h("button", { class: "btn btn--primary", type: "submit" }, "Send");
+  const chatForm = h(
+    "form",
+    { class: "talk__chat-form", onSubmit: onChatSubmit },
+    chatInput,
+    chatSendButton
+  );
+
   signal.addEventListener("abort", cleanup, { once: true });
 
   const view = h(
     "section",
     { class: "view view--talk" },
     h("div", { class: "talk__orb-wrap" }, orb.root),
-    caption
+    caption,
+    h("div", { class: "talk__chat" }, chatLog, chatForm)
   );
   outlet.replaceChildren(view);
+
+  const unsubscribeTranscript = subscribe("conversation.transcript", (params) => {
+    const role = params?.role;
+    const text = String(params?.text || "").trim();
+    if (text && (role === "user" || role === "assistant")) appendChatMessage(role, text);
+  });
 
   if (pending) {
     caption.textContent = `Applying "${prettifyProfileName(pending.name)}"…`;
@@ -103,6 +133,7 @@ export async function mountTalkView({ outlet, signal }) {
       orb.setState(restingState());
       caption.textContent = CAPTION_BY_STATE[restingState()];
       syncMicAria();
+      chatInput.disabled = false;
     },
     onActivity: (reason) => {
       if (muted) return;
@@ -114,6 +145,7 @@ export async function mountTalkView({ outlet, signal }) {
 
   function cleanup() {
     subscription?.close();
+    unsubscribeTranscript();
     orb.dispose();
     if (defaultAction) {
       defaultAction.hidden = true;
@@ -123,6 +155,34 @@ export async function mountTalkView({ outlet, signal }) {
 
   function restingState() {
     return muted ? ORB_STATES.MUTED : ORB_STATES.IDLE;
+  }
+
+  function appendChatMessage(role, text) {
+    chatLog.appendChild(h("p", { class: ["talk__chat-bubble", `talk__chat-bubble--${role}`] }, text));
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  async function onChatSubmit(event) {
+    event.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text || chatSendPending) return;
+    chatSendPending = true;
+    chatInput.disabled = true;
+    chatSendButton.disabled = true;
+    appendChatMessage("user", text);
+    chatInput.value = "";
+    try {
+      await sayText(text);
+    } catch (error) {
+      if (!signal.aborted) appendChatMessage("error", `Failed to send: ${describeError(error)}`);
+    } finally {
+      chatSendPending = false;
+      if (!signal.aborted) {
+        chatInput.disabled = false;
+        chatSendButton.disabled = false;
+        chatInput.focus();
+      }
+    }
   }
 
   async function onMicTap() {

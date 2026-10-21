@@ -361,6 +361,73 @@ Tags are advisory; installation still requires successful MCP validation.
 </details>
 
 <details>
+<summary>Local OpenVINO backend (experimental, personal-fork feature)</summary>
+
+Run the entire voice pipeline (speech-to-text, the conversational LLM, text-to-speech, and turn
+detection) locally on an Intel Core Ultra machine via OpenVINO, instead of the Hugging Face
+backend. This is a second, independent realtime server that speaks the same protocol as the
+`local` Hugging Face connection mode (see "Hugging Face Connection Modes" above), so it plugs into
+the app with no changes to the core conversation loop.
+
+**Install:**
+
+```bash
+uv sync --extra local-openvino
+```
+
+**Hardware:** designed for Intel Core Ultra Series 2/3 (CPU + integrated Arc GPU + NPU). Device
+selection defaults to OpenVINO's own `AUTO` (picks the best available device automatically); CPU,
+GPU, and NPU can be set explicitly per role. If a requested device fails to initialize (for
+example an NPU without a compatible driver, or a model whose compiled graph the NPU compiler
+rejects), the server automatically falls back to `AUTO` rather than failing to start.
+
+**Run standalone:** this is two separate processes, in two terminals — `local-openvino-server` is
+its own subcommand that takes over the process; it does not also start the main app or its web UI
+(`--ui` has no effect if combined into this same command). Its own `Uvicorn running on
+http://127.0.0.1:8765` log line is real, but that port only serves the raw `/v1/realtime` WebSocket
+backend, not a browser page — visiting it directly will 404.
+
+Terminal 1, the local backend:
+
+```bash
+reachy-mini-conversation-app local-openvino-server \
+  --stt-model OpenVINO/whisper-large-v3-fp16-ov \
+  --llm-model OpenVINO/Qwen3-8B-int4-ov \
+  --tts-model fastrtc/kokoro-onnx \
+  --port 8765
+```
+
+Add `--vision` if `--llm-model` is a vision-capable model (VLM), so the `camera` tool's images are
+understood.
+
+Terminal 2, the actual app with its web UI, pointed at that backend:
+
+```bash
+HF_REALTIME_CONNECTION_MODE=local HF_REALTIME_WS_URL=ws://127.0.0.1:8765/v1/realtime \
+  reachy-mini-conversation-app --ui
+```
+
+Open `http://127.0.0.1:7860/` — the app's own UI port, separate from the backend's `8765`.
+
+**Or use the Settings UI:** the "Local OpenVINO backend" section shows detected devices, lets you
+pick a model per role (from a curated list plus a live-refreshed catalog of the Hugging Face
+`OpenVINO` org), and has a "Download & start local backend" button that downloads any missing
+models, starts the server, and switches the app's connection over automatically.
+
+**Known limitations:**
+
+- Tool-calling is prompt-driven (not dependent on a specific OpenVINO GenAI API): the model is
+  asked to answer with a `<tool_call>{"name": ..., "arguments": {...}}</tool_call>` block. Smaller
+  models don't always reproduce the exact wrapper tags, so a bare JSON object is also accepted as
+  long as it's the model's entire reply. Reliability depends on the chosen LLM.
+- Vision requires selecting a vision-capable model (VLM) for the LLM role; a text-only LLM still
+  works for voice conversation, just without the `camera` tool.
+- Text-to-speech runs via Kokoro over plain ONNX Runtime CPU, not an OpenVINO device: Kokoro's
+  ONNX graph is currently incompatible with the OpenVINO execution provider.
+
+</details>
+
+<details>
 <summary>Multiple robots on the same subnet</summary>
 
 If you run multiple Reachy Mini daemons on the same network, use:

@@ -25,6 +25,26 @@ dependencies = [
     "mcp>=1.27.1",
 ]
 
+[project.optional-dependencies]
+# Local OpenVINO realtime backend (personal-fork feature; never imported by the
+# main app process, only by the `local-openvino-server` subprocess/CLI).
+local-openvino = [
+  "openvino",
+  "openvino-genai",
+  # TTS: Kokoro's ONNX graph is incompatible with the OpenVINO execution
+  # provider, so this role runs on plain ONNX Runtime CPU instead.
+  "kokoro-onnx",
+  # Silero VAD: also plain ONNX Runtime (already transitive via kokoro-onnx,
+  # declared explicitly since silero_vad.py imports it directly).
+  "onnxruntime",
+  # Vision: decodes camera JPEG frames into the tensor VLMPipeline expects.
+  "pillow",
+  # Already transitive via reachy-mini; declared explicitly since
+  # local_openvino/server.py and cli.py import them directly.
+  "fastapi",
+  "uvicorn",
+]
+
 [dependency-groups]
 dev = [
   "allure-pytest==2.16.0",
